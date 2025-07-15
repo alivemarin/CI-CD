@@ -4,7 +4,7 @@ WORKDIR /app
 #작업디렉토리 형성
 COPY requirements.txt .     
 #requirements.txt 파일 복사
-RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 #requirements.txt에 있는 패키지 설치
 COPY . .
 #현재 디렉토리의 모든 파일을 컨테이너의 /app 디렉토리에 복사
