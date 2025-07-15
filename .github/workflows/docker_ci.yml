@@ -1,0 +1,26 @@
+name: CI/CD – Build & Test Docker
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Build Docker image
+        run: docker build -t ci-cd-flask-app .
+
+      - name: Run container for testing
+        run: |
+          docker run -d --name test-flask -p 5000:5000 ci-cd-flask-app
+          sleep 5
+          curl -f http://localhost:5000 || (docker logs test-flask && exit 1)
+          docker stop test-flask
+          docker rm test-flask
