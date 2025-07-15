@@ -3,8 +3,8 @@ on:
   push:
     branches: [ main ]
     #태그(push) 이벤트 발생 시 실행
-  tags: [ 'v*.*.*' ]
-
+    tags: [ 'v*.*.*' ]
+#할 것들
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
