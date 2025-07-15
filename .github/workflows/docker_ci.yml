@@ -17,13 +17,13 @@ jobs:
 
       - name: Build & start services
         run: |
-          docker-compose up -d --build
+          docker compose up -d --build
           sleep 10
 
       - name: Run test suite
         run: |
-          docker-compose exec web pytest
+          docker compose exec web pytest
 
       - name: Tear down
         if: always()
-        run: docker-compose down --volumes --remove-orphans
+        run: docker compose down --volumes --remove-orphans
