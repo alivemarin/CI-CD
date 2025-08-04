@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   web:
-    image: ${DOCKERHUB_USERNAME}/myflask:latest
+    image: ${DOCKERHUB_USERNAME:-yourusername}/myflask:latest
     environment:
       - FLASK_ENV=production
     expose:
@@ -20,14 +20,37 @@ services:
       - ./certbot/conf:/etc/letsencrypt    # 인증서 파일
       - ./certbot/www:/var/www/certbot     # certbot 웹루트
     restart: unless-stopped
+    command: "/bin/sh -c 'nginx -g \"daemon off;\" & while :; do sleep 6h; nginx -s reload; done'"
+
 
   certbot:  
     image: certbot/certbot
     volumes:
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $!; done;'"
-    restart: unless-stopped
-    # 12시간마다 자동 갱신
-    # --staging 제거 후 실제 발급 (처음 발급이거나 강제 갱신 필요 시)
-    command: certonly --webroot -w /var/www/certbot --email davidhjw@naver.com --agree-tos --no-eff-email -d hanhack.mjsec.kr --force-renewal
+    entrypoint: /bin/sh -c # 쉘 스크립트를 실행하도록 명시적으로 설정
+    command: | 
+      # trap exit TERM; # Docker 컨테이너의 PID 1 프로세스가 종료되면 컨테이너도 종료되도록 함. (기본 동작이므로 생략 가능)
+
+      # 인증서가 없는 경우 (디렉토리 미존재) 첫 발급 시도
+      if [ ! -d /etc/letsencrypt/live/hanhack.mjsec.kr ]; then
+        echo "--- Initial certificate acquisition (certonly) in progress for hanhack.mjsec.kr ---"
+        # --force-renewal은 첫 발급에는 불필요 (남용 시 Rate Limit 위험)
+        certbot certonly --webroot -w /var/www/certbot --email davidhjw@naver.com --agree-tos -d hanhack.mjsec.kr
+        # 첫 발급 후 Nginx 컨테이너에게 reload 시그널을 보내는 것도 좋지만,
+        # Nginx 컨테이너의 command에서 주기적인 reload를 시도하므로 생략 가능 (심플함 유지)
+      fi
+
+      # 이제 주기적인 갱신 루프 시작
+      echo "--- Starting certificate renewal loop (renew) for hanhack.mjsec.kr ---"
+      while :; do
+        certbot renew
+        # certbot renew 명령이 성공 (exit code 0) 했을 경우
+        if [ $? -eq 0 ]; then
+          echo "--- Certbot renewal check completed. If certificate was renewed, Nginx will reload soon. ---"
+        else
+          echo "--- Certbot renewal failed or encountered issues. Check logs for details. ---"
+        fi
+        sleep 12h # 12시간 (43200초) 대기 후 다시 시도
+      done;
+    restart: unless-stopped 
