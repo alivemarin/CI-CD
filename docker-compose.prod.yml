@@ -28,22 +28,6 @@ services:
     volumes:
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
-    entrypoint: /bin/sh -c # 쉘 스크립트를 실행하도록 명시적으로 설정
-    command: | # <--- 여기에 주목! '|' (literal block) 스타일을 사용해야 쉘 스크립트가 정확하게 파싱됨
-      # 이제 주기적인 갱신 루프 시작
-      echo "--- Starting certificate renewal loop (renew) for hanhack.mjsec.kr ---"
-      while :; do
-        certbot renew --webroot -w /var/www/certbot # 갱신 시에도 --webroot 방식 사용
-        # certbot renew 명령이 성공 (exit code 0) 했을 경우
-        if [ $? -eq 0 ]; then
-          echo "--- Certbot renewal check completed. If certificate was renewed, reloading Nginx ---"
-          # Nginx 컨테이너에게 reload 시그널을 명시적으로 보내는 것이 좋음
-          # docker exec {프로젝트명-nginx서비스명}-1 nginx -s reload 와 같은 명령을 컨테이너 밖에서 주기적으로 실행하거나
-          # 또는 nginx 컨테이너의 command에서 주기적으로 reload를 하도록 설정했으니, 그 방식에 의존해도 됨
-          # 여기서는 일단 별도로 reload 명령을 넣지 않음 (nginx command에 의존)
-        else
-          echo "--- Certbot renewal failed or encountered issues. Check logs for details. ---"
-        fi
-        sleep 12h # 12시간 (43200초) 대기 후 다시 시도
-      done;
+    entrypoint: /bin/sh
+    command: -c "while :; do certbot renew --webroot -w /var/www/certbot && echo 'renew check'; sleep 12h; done"
     restart: unless-stopped # 컨테이너가 죽으면 자동으로 재시작되도록 함 (필수!)
