@@ -2,7 +2,6 @@ version: '3.8'
 services:
   web:
     image: ${DOCKERHUB_USERNAME}/myflask:latest
-    build: null
     environment:
       - FLASK_ENV=production
     expose:
@@ -27,10 +26,8 @@ services:
     volumes:
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $!; done;'"
     restart: unless-stopped
     # 12시간마다 자동 갱신
-    # 첫 인증서 발급 시에는 아래 command 주석 해제 후 한 번만 실행하고, 성공하면 주석 처리
-    # command: certonly --webroot -w /var/www/certbot --email davidhjw@naver.com --agree-tos --no-eff-email -d hanhack.mjsec.kr --staging # 첫 발급 시 --staging으로 테스트
     # --staging 제거 후 실제 발급 (처음 발급이거나 강제 갱신 필요 시)
     command: certonly --webroot -w /var/www/certbot --email davidhjw@naver.com --agree-tos --no-eff-email -d hanhack.mjsec.kr --force-renewal
