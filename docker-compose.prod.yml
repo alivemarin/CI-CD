@@ -1,11 +1,12 @@
-version: '3.9'
+# version: "3.9"     # ← 경고만 유발하므로 그대로 생략
+
 services:
   web:
-    image: ${DOCKERHUB_USERNAME:-yourusername}/myflask:latest
-    environment:
-      - FLASK_ENV=production
+    image: ${DOCKERHUB_USERNAME}/myflask:latest
+    environment:           # ← 매핑 형식
+      FLASK_ENV: production
     expose:
-      - "5000"           # 외부 노출은 nginx가 담당
+      - "5000"
     restart: unless-stopped
 
   nginx:
@@ -14,10 +15,10 @@ services:
     depends_on:
       - web
     ports:
-      - "80:80" # HTTP 포트
-      - "443:443" #443 포트 추가 (HTTPS)
+      - "80:80"
+      - "443:443"
     volumes:
-      - ./nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro # 템플릿 파일 읽기형식으로 넣기
+      - ./nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
       - ./certbot/config:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
     environment:           # ← 매핑 형식
@@ -31,24 +32,23 @@ services:
         exec nginx -g 'daemon off;'
     restart: unless-stopped
 
-certbot:  #초기발급 certbot 서비스
+  certbot:
     image: certbot/certbot
     command:
       - certonly
       - --webroot
       - --webroot-path=/var/www/certbot
-      - --non-interactive # 비대화식 모드
+      - --non-interactive
       - --agree-tos
       - --email
       - "${LETSENCRYPT_EMAIL}"
-      - -d
-      - "${DOMAIN}"
+      - -d "${DOMAIN}"
     volumes:
       - ./certbot/config:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
-    restart: "no" # 초기 발급 후 재시작하지 않음
+    restart: "no"
 
-certbot-renew:  # 인증서 갱신 서비스
+  certbot-renew:
     image: certbot/certbot
     volumes:
       - ./certbot/config:/etc/letsencrypt
@@ -56,9 +56,9 @@ certbot-renew:  # 인증서 갱신 서비스
       - /var/run/docker.sock:/var/run/docker.sock
     entrypoint: >
       sh -c "while true; do
-               certbot renew --quiet --deploy-hook 'docker exec nginx nginx -s reload';
-               sleep 12h;
-             done"
+            certbot renew --quiet --deploy-hook 'docker exec nginx nginx -s reload';
+            sleep 12h;
+            done"
     restart: unless-stopped
 
 volumes:
@@ -66,4 +66,3 @@ volumes:
     driver: local
   certbot-www:
     driver: local
-
